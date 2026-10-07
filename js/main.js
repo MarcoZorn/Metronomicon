@@ -1,7 +1,7 @@
 // Screens, input, render loop. Gameplay timing reads ctx.currentTime only;
 // requestAnimationFrame just redraws.
 import { initAudio, now, click, schedule, ctx } from './audio.js';
-import { judge, nearestBeat, timeToBeat } from './timing.js';
+import { judge, nearestBeat, timeToBeat, median } from './timing.js';
 
 const cv = document.getElementById('c');
 export const g = cv.getContext('2d');
@@ -111,7 +111,57 @@ export function text(s, x, y, size, color, alpha = 1) {
   g.globalAlpha = 1;
 }
 
-const screens = { test: beatTest, cal: () => menu, play: () => menu };
+// ---------- calibration ----------
+// Tap along to a click. Median of (tap - beat) = how late input+audio arrive.
+function calibrate() {
+  const bpm = 100, need = 16;
+  let t0, stop, deltas = [], done = false;
+  return {
+    enter() {
+      t0 = now() + 0.5;
+      stop = schedule(bpm, t0, (step, t) => step % 4 === 0 && click(t, step % 16 === 0));
+    },
+    leave() { stop(); },
+    key(code, t) {
+      if (code !== 'Space' || done) return;
+      const { beat, delta } = nearestBeat(t, bpm, t0);
+      if (beat < 4 || Math.abs(delta) > 0.25) return; // skip count-in and wild taps
+      deltas.push(delta);
+      if (deltas.length >= need) finish();
+    },
+    draw(t) {
+      const b = timeToBeat(t, bpm, t0);
+      const pulse = b < 0 ? 0 : Math.exp(-(b - Math.floor(b)) * 6);
+      g.fillStyle = '#0d0a14';
+      g.fillRect(0, 0, W, H);
+      g.fillStyle = `rgba(255,204,77,${0.2 + pulse * 0.8})`;
+      g.beginPath(); g.arc(W / 2, H / 2 - 20, 60 + pulse * 30, 0, 7); g.fill();
+      text('CALIBRATION', W / 2, 60, 28, '#ffcc4d');
+      text(b < 4 ? `listen... ${4 - Math.floor(Math.max(0, b))}` : 'tap SPACE on every click',
+        W / 2, 100, 18, '#efe6ff');
+      text(`${deltas.length} / ${need} taps`, W / 2, H - 120, 20, '#8a7fa3');
+      if (deltas.length) text(`current estimate: ${Math.round(median(deltas) * 1000)} ms`, W / 2, H - 80, 20, '#4dfff0');
+    },
+  };
+  function finish() {
+    done = true;
+    let ms = Math.round(median(deltas) * 1000);
+    const el = panel(`<h2>Calibrated</h2><p>Your input/audio offset:</p><p class="big" id="ms">${ms} ms</p>
+      <p class="dim">positive = you hear/press late; it gets subtracted from every press.<br>
+      Fine-tune with <kbd>-</kbd> <kbd>+</kbd>.</p>
+      <button id="save">Save</button><button class="alt" id="retry">Retry</button>`);
+    const show = () => (el.querySelector('#ms').textContent = `${ms} ms`);
+    el.querySelector('#save').onclick = () => { store.offsetMs = ms; go(menu); };
+    el.querySelector('#retry').onclick = () => go(calibrate());
+    el.querySelector('#save').focus();
+    el.onkeydown = e => {
+      if (e.key === '-') { ms -= 5; show(); }
+      if (e.key === '+' || e.key === '=') { ms += 5; show(); }
+    };
+  }
+}
+
+const screens = { test: beatTest, cal: calibrate, play: () => menu };
 export function addScreen(name, factory) { screens[name] = factory; }
 
 // ---------- input + loop ----------
