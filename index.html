@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Metronomicon</title>
+<meta name="description" content="A rhythm dungeon crawler. Move on the beat.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root { --bg: #0d0a14; --ink: #efe6ff; --dim: #8a7fa3; --gold: #ffcc4d; --red: #ff4d6d; --cyan: #4dfff0; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink);
+    font-family: 'Silkscreen', ui-monospace, monospace; overflow: hidden; }
+  #wrap { position: fixed; inset: 0; display: grid; place-items: center; }
+  canvas { width: min(100vw, 150vh); aspect-ratio: 3 / 2; image-rendering: pixelated; display: block; }
+  #ui { position: fixed; inset: 0; display: grid; place-items: center; pointer-events: none; }
+  #ui:empty { display: none; }
+  .panel { pointer-events: auto; text-align: center; background: rgba(13,10,20,.88); border: 2px solid #3a2d55;
+    padding: 28px 36px; max-width: min(92vw, 560px); box-shadow: 0 0 40px #0008; }
+  h1 { font-size: clamp(28px, 6vw, 52px); margin: 0 0 4px; color: var(--gold); letter-spacing: 2px; text-shadow: 3px 3px 0 #6b2fb3; }
+  h2 { margin: 0 0 12px; color: var(--gold); }
+  p { margin: 8px 0; line-height: 1.5; }
+  .dim { color: var(--dim); font-size: 13px; }
+  button { font: inherit; font-size: 18px; color: var(--bg); background: var(--gold); border: 0; padding: 12px 22px;
+    margin: 6px; cursor: pointer; box-shadow: 0 4px 0 #a8791b; }
+  button:hover, button:focus-visible { background: #fff0b3; outline: none; }
+  button.alt { background: #3a2d55; color: var(--ink); box-shadow: 0 4px 0 #1f1830; }
+  kbd { display: inline-block; border: 1px solid var(--dim); padding: 1px 6px; margin: 0 2px; font: inherit; font-size: 13px; }
+  table { margin: 10px auto; border-collapse: collapse; text-align: left; font-size: 14px; }
+  td { padding: 3px 10px; }
+  .big { font-size: 32px; color: var(--gold); }
+</style>
+</head>
+<body>
+<div id="wrap"><canvas id="c" width="960" height="640"></canvas></div>
+<div id="ui"></div>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
