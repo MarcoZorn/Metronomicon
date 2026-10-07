@@ -13,7 +13,6 @@ function painter(g, ox, oy, s) {
   };
 }
 
-const flashOn = () => ((performance.now() / 70) | 0) % 2 === 0;
 
 // ---------- tiles ----------
 
@@ -125,7 +124,7 @@ function shadow(g, px, py, s, w) {
 export function drawPlayer(g, px, py, s, pulse = 0, facing = 'down', hurt = false) {
   shadow(g, px, py, s, 9);
   const k = 0.12 * pulse;
-  const f = hurt ? (flashOn() ? '#ffffff' : '#ff3344') : null;
+  const f = hurt ? '#ff3344' : null; // game.js blinks hurt on the audio clock
   const c = (col) => f || col;
   const back = facing === 'up';
   actor(g, px, py, s, 1 + k, 1 - k, facing === 'left', (p) => {
