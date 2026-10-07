@@ -2,6 +2,7 @@
 // requestAnimationFrame just redraws.
 import { initAudio, now, click, schedule, ctx } from './audio.js';
 import { judge, nearestBeat, timeToBeat, median } from './timing.js';
+import { game } from './game.js';
 
 const cv = document.getElementById('c');
 export const g = cv.getContext('2d');
@@ -161,7 +162,7 @@ function calibrate() {
   }
 }
 
-const screens = { test: beatTest, cal: calibrate, play: () => menu };
+const screens = { test: beatTest, cal: calibrate, play: () => game() };
 export function addScreen(name, factory) { screens[name] = factory; }
 
 // ---------- input + loop ----------
