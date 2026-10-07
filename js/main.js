@@ -57,9 +57,52 @@ export const menu = {
   draw() { drawTitleBg(); },
 };
 
+// Title backdrop: visual only, driven by a frame counter (no audio yet).
+let tf = 0;
+const embers = Array.from({ length: 70 }, () => ({ x: Math.random(), y: Math.random(), v: 0.3 + Math.random(), s: 2 + Math.random() * 3, p: Math.random() * 6.28 }));
 function drawTitleBg() {
+  const f = ++tf / 60, beat = Math.exp(-((f * 2) % 1) * 4); // fake 120 bpm throb
   g.fillStyle = '#0d0a14';
   g.fillRect(0, 0, W, H);
+  // faint grid scrolling toward the viewer
+  g.strokeStyle = 'rgba(179,107,255,0.08)';
+  g.lineWidth = 1;
+  const off = (f * 20) % 40;
+  g.beginPath();
+  for (let x = -off; x < W; x += 40) { g.moveTo(x, 0); g.lineTo(x, H); }
+  for (let y = off; y < H; y += 40) { g.moveTo(0, y); g.lineTo(W, y); }
+  g.stroke();
+  // purple/gold pulsing glows
+  for (const [cx, cy, r, c] of [[W * 0.3, H * 0.4, 0.6, '179,107,255'], [W * 0.72, H * 0.62, 0.45, '255,204,77']]) {
+    const rad = W * r * (0.9 + beat * 0.1 + Math.sin(f + cx) * 0.05);
+    const gr = g.createRadialGradient(cx, cy, 0, cx, cy, rad);
+    gr.addColorStop(0, `rgba(${c},${0.22 + beat * 0.12})`);
+    gr.addColorStop(1, `rgba(${c},0)`);
+    g.fillStyle = gr;
+    g.fillRect(0, 0, W, H);
+  }
+  // drifting embers
+  for (const e of embers) {
+    const y = ((e.y - f * e.v * 0.05) % 1 + 1) % 1 * H, x = e.x * W + Math.sin(f * 1.3 + e.p) * 14;
+    g.globalAlpha = 0.3 + 0.5 * Math.abs(Math.sin(f * 2 + e.p)) * (y / H);
+    g.fillStyle = e.v > 0.9 ? '#ffcc4d' : '#ff7a4d';
+    g.fillRect(x, y, e.s, e.s);
+  }
+  g.globalAlpha = 1;
+  vignette(0.75);
+}
+
+let vig = null;
+export function vignette(a) {
+  if (!vig) {
+    vig = g.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.35, W / 2, H / 2, Math.hypot(W, H) / 2);
+    vig.addColorStop(0, 'rgba(0,0,0,0)');
+    vig.addColorStop(1, 'rgba(0,0,0,1)');
+  }
+  g.globalAlpha = a;
+  g.fillStyle = vig;
+  g.fillRect(0, 0, W, H);
+  g.globalAlpha = 1;
 }
 
 // ---------- beat test (metronome + pulsing square) ----------

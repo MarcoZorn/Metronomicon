@@ -6,7 +6,7 @@ import { beatToTime, timeToBeat, nearestBeat, judge, GOOD } from './timing.js';
 import { startSong } from './music.js';
 import { drawTile, drawPlayer, drawEnemy, drawHeart } from './sprites.js';
 import { LEVEL } from './level.js';
-import { g, W, H, go, panel, menu, store, text, COLORS } from './main.js';
+import { g, W, H, go, panel, menu, store, text, COLORS, vignette } from './main.js';
 
 const S = 48, OY = 64; // tile size, map top
 const DIRS = { ArrowUp: [0, -1], KeyW: [0, -1], ArrowDown: [0, 1], KeyS: [0, 1],
@@ -14,6 +14,7 @@ const DIRS = { ArrowUp: [0, -1], KeyW: [0, -1], ArrowDown: [0, 1], KeyS: [0, 1],
 const FACING = { '0,-1': 'up', '0,1': 'down', '-1,0': 'left', '1,0': 'right' };
 const ENEMY = { bat: { hp: 1, pts: 100 }, skeleton: { hp: 2, pts: 250 }, slime: { hp: 1, pts: 150 } };
 const MAX_HP = 5;
+const MILESTONES = { 10: ['ON BEAT!', '#ffcc4d'], 25: ['GROOVING!', '#4dfff0'], 50: ['NECRO-MAESTRO!', '#ff4dff'] };
 const AUTO = new URLSearchParams(location.search).has('auto');
 
 function rng(seed) { // mulberry32: same level, same bat flights
@@ -40,6 +41,7 @@ export function game(L = LEVEL) {
   const counts = { Perfect: 0, Good: 0, Miss: 0 };
   let song, songStart, base, nextTick = 0, beat = -1, lastActed = -1, started = false;
   let combo = 0, maxCombo = 0, score = 0, kills = 0, shakeAt = -9, shakeAmt = 0, over = false, layerOn = {};
+  let banner = null, stairsAt = -9;
 
   const offset = () => (AUTO ? 0 : store.offsetMs / 1000);
   const spikesUp = () => (beat + 1) % 2 === 0;          // state for the coming beat
@@ -100,6 +102,7 @@ export function game(L = LEVEL) {
     lastActed = b;
     combo++;
     maxCombo = Math.max(maxCombo, combo);
+    if (MILESTONES[combo]) banner = { s: MILESTONES[combo][0], color: MILESTONES[combo][1], t: now() };
     score += (r === 'Perfect' ? 100 : 50) * mult();
     float(r === 'Perfect' ? 'Perfect!' : `Good ${ms > 0 ? '+' : ''}${ms}`, player.x, player.y - 0.4, COLORS[r], r === 'Perfect' ? 22 : 18, true);
     const nx = player.x + dx, ny = player.y + dy;
@@ -162,7 +165,7 @@ export function game(L = LEVEL) {
       }
     }
     if (tile(player.x, player.y) === '^' && spikesUp() && !over) hurt('spikes!');
-    if (n + 1 === L.exitBeat) { float('STAIRS OPEN!', exit.x, exit.y - 0.6, '#ffcc4d', 20); burst(exit.x, exit.y, '#ffcc4d', 30); }
+    if (n + 1 === L.exitBeat) { stairsAt = now(); float('STAIRS OPEN!', exit.x, exit.y - 0.6, '#ffcc4d', 20); burst(exit.x, exit.y, '#ffcc4d', 30); }
   }
 
   const windup = (e, n) => (e.type === 'skeleton' || e.type === 'slime') && (n + 1 - e.born) % 2 === 0;
@@ -277,6 +280,23 @@ export function game(L = LEVEL) {
       }
       g.restore();
 
+      // screen fx: vignette, beat-pulsed edge glow (colour by combo), hurt / stairs flashes
+      vignette(0.6);
+      const heat = Math.min(1, combo / 30);
+      const edge = combo >= 24 ? `hsla(${(t * 300) % 360},100%,60%,` : combo >= 12 ? 'rgba(77,255,240,' : 'rgba(255,204,77,';
+      const ga = pulse * (0.12 + heat * 0.45);
+      if (ga > 0.01) {
+        const eg = g.createRadialGradient(W / 2, H / 2, Math.min(W, H) * (0.45 - heat * 0.1), W / 2, H / 2, Math.hypot(W, H) / 2);
+        eg.addColorStop(0, edge + '0)');
+        eg.addColorStop(1, edge + ga + ')');
+        g.fillStyle = eg;
+        g.fillRect(0, 0, W, H);
+      }
+      for (const [at, c, dur] of [[player.hurtAt, '255,40,70', 0.35], [stairsAt, '255,204,77', 0.6]]) {
+        const k = 1 - (t - at) / dur;
+        if (k > 0) { g.fillStyle = `rgba(${c},${k * 0.35})`; g.fillRect(0, 0, W, H); }
+      }
+
       // HUD
       g.fillStyle = '#0d0a14';
       g.fillRect(0, 0, W, OY);
@@ -305,6 +325,15 @@ export function game(L = LEVEL) {
       }
       if (bf < 8) text(bf < 0 ? 'GET READY' : `${L.name.toUpperCase()} · move on the beat!`, W / 2, OY + 280, 24, '#ffcc4d', Math.min(1, (8 - bf) / 2));
       if (AUTO) text('AUTO', 220, 32, 12, '#8a7fa3');
+      if (banner) {
+        const a = t - banner.t;
+        if (a > 1.4) banner = null;
+        else {
+          const sc = a < 0.15 ? 0.4 + a / 0.15 * 0.8 : 1.2 - Math.min(0.2, (a - 0.15) * 0.6);
+          const col = banner.s === 'NECRO-MAESTRO!' ? `hsl(${(t * 300) % 360},100%,65%)` : banner.color;
+          text(banner.s, W / 2, H / 2 - 40, 44 * sc, col, Math.min(1, (1.4 - a) * 2.5));
+        }
+      }
     },
   };
 }
